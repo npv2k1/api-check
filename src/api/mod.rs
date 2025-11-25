@@ -34,6 +34,9 @@ impl ApiState {
 }
 
 /// Create the management API router
+///
+/// Note: The PUT /api/config endpoint replaces the entire configuration.
+/// For production use, consider implementing PATCH endpoints for partial updates.
 pub fn create_api_router(state: Arc<ApiState>) -> Router {
     Router::new()
         // Configuration endpoints

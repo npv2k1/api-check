@@ -166,19 +166,24 @@ impl ApiTester {
 
         self.running.store(false, Ordering::Relaxed);
 
-        // Calculate summary
+        // Calculate summary with single iteration for efficiency
         let total_requests = results.len() as u32;
         let successful = results.iter().filter(|r| r.success).count() as u32;
         let failed = total_requests - successful;
 
-        let latencies: Vec<f64> = results.iter().map(|r| r.latency_ms).collect();
-        let avg_latency_ms = if latencies.is_empty() {
+        // Calculate latency stats in a single iteration
+        let (sum_latency, min_latency_ms, max_latency_ms) = results
+            .iter()
+            .map(|r| r.latency_ms)
+            .fold((0.0, f64::MAX, 0.0_f64), |(sum, min, max), lat| {
+                (sum + lat, min.min(lat), max.max(lat))
+            });
+
+        let avg_latency_ms = if results.is_empty() {
             0.0
         } else {
-            latencies.iter().sum::<f64>() / latencies.len() as f64
+            sum_latency / results.len() as f64
         };
-        let min_latency_ms = latencies.iter().cloned().fold(f64::MAX, f64::min);
-        let max_latency_ms = latencies.iter().cloned().fold(0.0, f64::max);
 
         let summary = TestRunSummary {
             total_requests,

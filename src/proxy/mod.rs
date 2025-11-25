@@ -127,8 +127,9 @@ async fn forward_request(
     let method = req.method().clone();
     let headers = req.headers().clone();
 
-    // Read the request body
-    let body_bytes = axum::body::to_bytes(req.into_body(), usize::MAX).await?;
+    // Read the request body with a reasonable size limit (10MB max)
+    const MAX_BODY_SIZE: usize = 10 * 1024 * 1024;
+    let body_bytes = axum::body::to_bytes(req.into_body(), MAX_BODY_SIZE).await?;
 
     // Build the forwarded request
     let mut builder = client.request(

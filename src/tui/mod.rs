@@ -153,7 +153,8 @@ impl TuiApp {
 
         // Update latency history (convert to u64 for sparkline)
         if summary.total_requests > 0 {
-            let avg_latency = summary.avg_latency_ms.round() as u64;
+            // Safely convert f64 to u64, clamping to valid range
+            let avg_latency = summary.avg_latency_ms.max(0.0).round() as u64;
             self.latency_history.push(avg_latency);
             if self.latency_history.len() > 100 {
                 self.latency_history.remove(0);

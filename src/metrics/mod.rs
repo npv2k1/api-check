@@ -212,11 +212,16 @@ impl MetricsCollector {
             .fold(f64::MAX, f64::min);
         let max_latency = metrics.iter().map(|m| m.latency_ms).fold(0.0, f64::max);
 
-        if max_latency == min_latency {
+        // Handle edge cases: same values, invalid ranges, or insufficient data
+        if max_latency == min_latency || buckets == 0 {
             return vec![(min_latency, metrics.len() as u64)];
         }
 
         let bucket_size = (max_latency - min_latency) / buckets as f64;
+        // Guard against NaN or zero bucket_size
+        if !bucket_size.is_finite() || bucket_size == 0.0 {
+            return vec![(min_latency, metrics.len() as u64)];
+        }
         let mut histogram = vec![0u64; buckets];
 
         for metric in metrics.iter() {
