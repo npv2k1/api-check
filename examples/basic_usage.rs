@@ -1,55 +1,57 @@
-use template_rust::{database::TodoDatabase, models::Todo};
+//! Basic usage example for api-check
+
+use api_check::config::{AppConfig, SharedConfig, TestConfig};
+use api_check::metrics::create_shared_metrics;
+use api_check::testing::create_shared_tester;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize database
-    let db = TodoDatabase::new("example.db").await?;
+    // Create configuration
+    let config = AppConfig::default();
+    println!("Server configuration:");
+    println!("  Host: {}", config.server.host);
+    println!("  Port: {}", config.server.port);
+    println!("  Proxy enabled: {}", config.proxy.enabled);
 
-    // Create some todos
-    let todo1 = Todo::new(
-        "Learn Rust".to_string(),
-        Some("Study ownership and borrowing".to_string()),
-    );
-    let todo2 = Todo::new("Build a CLI app".to_string(), None);
-    let todo3 = Todo::new(
-        "Write tests".to_string(),
-        Some("Unit and integration tests".to_string()),
-    );
+    // Create shared state
+    let shared_config = SharedConfig::new(config);
+    let metrics = create_shared_metrics(1000);
+    let tester = create_shared_tester(shared_config.clone(), metrics.clone());
 
-    // Save todos to database
-    db.create_todo(&todo1).await?;
-    db.create_todo(&todo2).await?;
-    db.create_todo(&todo3).await?;
+    // Update test configuration
+    let test_config = TestConfig {
+        num_calls: 5,
+        frequency_ms: 100,
+        method: "GET".to_string(),
+        target_url: Some("https://httpbin.org/get".to_string()),
+        body: None,
+        headers: vec![],
+    };
+    shared_config.update_test(test_config.clone());
 
-    // List all todos
-    println!("All todos:");
-    let todos = db.get_all_todos().await?;
-    for todo in &todos {
-        let status = if todo.completed { "✓" } else { "○" };
-        println!("  {} {}", status, todo.title);
-        if let Some(description) = &todo.description {
-            println!("    {}", description);
-        }
-    }
+    println!("\nTest configuration:");
+    println!("  Num calls: {}", test_config.num_calls);
+    println!("  Frequency: {}ms", test_config.frequency_ms);
+    println!("  Method: {}", test_config.method);
+    println!("  Target: {:?}", test_config.target_url);
 
-    // Complete the first todo
-    let mut todo = todos[0].clone();
-    todo.complete();
-    db.update_todo(&todo).await?;
+    // Run a simple test
+    println!("\nRunning API test...");
+    let summary = tester.run_with_config(test_config).await?;
 
-    println!("\nAfter completing first todo:");
-    let updated_todos = db.get_all_todos().await?;
-    for todo in &updated_todos {
-        let status = if todo.completed { "✓" } else { "○" };
-        println!("  {} {}", status, todo.title);
-    }
+    println!("\nTest Results:");
+    println!("  Total requests: {}", summary.total_requests);
+    println!("  Successful: {}", summary.successful);
+    println!("  Failed: {}", summary.failed);
+    println!("  Avg latency: {:.2}ms", summary.avg_latency_ms);
+    println!("  Min latency: {:.2}ms", summary.min_latency_ms);
+    println!("  Max latency: {:.2}ms", summary.max_latency_ms);
 
-    // Get only pending todos
-    println!("\nPending todos:");
-    let pending_todos = db.get_todos_by_status(false).await?;
-    for todo in &pending_todos {
-        println!("  ○ {}", todo.title);
-    }
+    // Check metrics
+    let metrics_summary = metrics.get_summary();
+    println!("\nMetrics Summary:");
+    println!("  Total recorded: {}", metrics_summary.total_requests);
+    println!("  Requests/sec: {:.2}", metrics_summary.requests_per_second);
 
     Ok(())
 }

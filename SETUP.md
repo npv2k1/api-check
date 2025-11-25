@@ -1,6 +1,6 @@
 # Setup Guide
 
-This guide will help you set up the development environment for template-rust using various methods.
+This guide will help you set up the development environment for API Check.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ This guide will help you set up the development environment for template-rust us
 
 Choose one of the following setup methods based on your preference:
 
-- **Local Development**: Rust 1.70+, SQLite3
+- **Local Development**: Rust 1.70+
 - **Docker**: Docker 20.10+ and Docker Compose (optional)
 - **Nix**: Nix package manager with flakes enabled
 - **Codespaces**: GitHub account (no local setup required)
@@ -30,8 +30,14 @@ Choose one of the following setup methods based on your preference:
 The fastest way to get started depends on your environment:
 
 ```bash
-# Local development
-cargo run -- --help
+# Local development - start the server
+cargo run
+
+# Start with TUI dashboard
+cargo run -- tui
+
+# Run API tests
+cargo run -- test -t http://example.com
 
 # Docker
 docker compose up
@@ -56,30 +62,14 @@ cargo run
    source $HOME/.cargo/env
    ```
 
-2. **Install SQLite** (if not already installed):
-   
-   - **Ubuntu/Debian**:
-     ```bash
-     sudo apt-get update
-     sudo apt-get install sqlite3 libsqlite3-dev
-     ```
-   
-   - **macOS**:
-     ```bash
-     brew install sqlite
-     ```
-   
-   - **Windows**:
-     Download from [SQLite Download Page](https://www.sqlite.org/download.html)
-
-3. **Clone and build**:
+2. **Clone and build**:
    ```bash
-   git clone https://github.com/pnstack/template-rust.git
-   cd template-rust
+   git clone https://github.com/npv2k1/api-check.git
+   cd api-check
    cargo build --release
    ```
 
-4. **Run the application**:
+3. **Run the application**:
    ```bash
    cargo run -- --help
    ```
@@ -105,27 +95,19 @@ rustup component add rust-analyzer
 
 1. **Build the Docker image**:
    ```bash
-   docker build -t template-rust:latest .
+   docker build -t api-check:latest .
    ```
 
 2. **Run the container**:
    ```bash
    # Run with help
-   docker run --rm template-rust:latest --help
+   docker run --rm api-check:latest --help
 
-   # Run TUI mode (interactive)
-   docker run --rm -it -v $(pwd)/data:/app/data template-rust:latest tui
+   # Run server
+   docker run --rm -p 3000:3000 api-check:latest server
 
-   # Run CLI commands
-   docker run --rm -v $(pwd)/data:/app/data template-rust:latest list
-   ```
-
-3. **Persist data**:
-   
-   The container stores data in `/app/data`. Mount a volume to persist data:
-   ```bash
-   mkdir -p data
-   docker run --rm -it -v $(pwd)/data:/app/data template-rust:latest tui
+   # Run with custom port
+   docker run --rm -p 8080:8080 api-check:latest --port 8080 server
    ```
 
 ### Docker Compose
@@ -136,12 +118,11 @@ Docker Compose simplifies multi-service development and provides predefined conf
 
 1. **Start the application**:
    ```bash
-   docker compose up template-rust
+   docker compose up api-check
    ```
 
 2. **Start in development mode**:
    ```bash
-   # Development mode with live code mounting
    docker compose up dev
    ```
 
@@ -149,33 +130,6 @@ Docker Compose simplifies multi-service development and provides predefined conf
    ```bash
    docker compose up --build
    ```
-
-4. **Run in detached mode**:
-   ```bash
-   docker compose up -d
-   ```
-
-5. **Stop services**:
-   ```bash
-   docker compose down
-   ```
-
-#### Development Workflow
-
-The `dev` service in docker-compose.yml provides:
-- Live code mounting for rapid development
-- Cargo cache for faster builds
-- Interactive terminal access
-
-```bash
-# Enter development container
-docker compose run --rm dev bash
-
-# Inside container
-cargo build
-cargo test
-cargo run -- tui
-```
 
 ### Nix
 
@@ -194,58 +148,11 @@ Nix provides reproducible development environments across different systems.
    nix develop
    ```
 
-   This provides:
-   - Rust toolchain with rust-analyzer
-   - All build dependencies
-   - Development tools
-
-3. **Build the project**:
+3. **Build and run**:
    ```bash
-   nix build
+   cargo build
+   cargo run
    ```
-
-4. **Run the application**:
-   ```bash
-   nix run
-   ```
-
-#### Using Traditional Nix Shell
-
-If you prefer not to use flakes:
-
-```bash
-nix-shell
-```
-
-This provides the same development environment using `shell.nix`.
-
-#### Direnv Integration (Optional)
-
-For automatic environment activation:
-
-1. **Install direnv**:
-   ```bash
-   # Via Nix
-   nix-env -iA nixpkgs.direnv
-   
-   # Via package manager
-   # Ubuntu/Debian: sudo apt install direnv
-   # macOS: brew install direnv
-   ```
-
-2. **Configure direnv**:
-   ```bash
-   # Add to ~/.bashrc or ~/.zshrc
-   eval "$(direnv hook bash)"  # or zsh
-   ```
-
-3. **Create .envrc**:
-   ```bash
-   echo "use flake" > .envrc
-   direnv allow
-   ```
-
-Now the environment activates automatically when you enter the directory!
 
 ### GitHub Codespaces / Devcontainer
 
@@ -253,34 +160,10 @@ The easiest way to get started with zero local setup.
 
 #### Using GitHub Codespaces
 
-1. **Open in Codespaces**:
-   - Navigate to the repository on GitHub
-   - Click "Code" → "Codespaces" → "Create codespace on main"
-   - Wait for the environment to build (first time only)
-
-2. **Start developing**:
-   - All tools are pre-installed
-   - VS Code with Rust extensions ready
-   - Project automatically builds on creation
-
-#### Using Local Devcontainer
-
-If you have Docker and VS Code locally:
-
-1. **Install prerequisites**:
-   - Docker Desktop
-   - VS Code
-   - "Dev Containers" extension for VS Code
-
-2. **Open in container**:
-   - Open the repository in VS Code
-   - Press `F1` → "Dev Containers: Reopen in Container"
-   - Wait for container to build
-
-3. **Start developing**:
-   - Integrated terminal has all tools
-   - Extensions auto-installed
-   - Same environment as Codespaces
+1. Navigate to the repository on GitHub
+2. Click "Code" → "Codespaces" → "Create codespace on main"
+3. Wait for the environment to build
+4. Start developing!
 
 ## Building the Project
 
@@ -296,13 +179,7 @@ cargo build
 cargo build --release
 ```
 
-The binary will be in `target/release/template-rust`.
-
-### Checking Code Without Building
-
-```bash
-cargo check
-```
+The binary will be in `target/release/api-check`.
 
 ## Running Tests
 
@@ -312,22 +189,10 @@ cargo check
 cargo test
 ```
 
-### Specific Test
-
-```bash
-cargo test test_name
-```
-
 ### With Output
 
 ```bash
 cargo test -- --nocapture
-```
-
-### Integration Tests Only
-
-```bash
-cargo test --test integration_tests
 ```
 
 ## Code Quality
@@ -338,40 +203,32 @@ cargo test --test integration_tests
 cargo fmt
 ```
 
-### Check Formatting
-
-```bash
-cargo fmt --check
-```
-
 ### Run Linter
-
-```bash
-cargo clippy
-```
-
-### Run Linter (Strict)
 
 ```bash
 cargo clippy -- -D warnings
 ```
 
-## Common Issues
+## Environment Variables
 
-### Issue: SQLite not found
+The application supports the following environment variables:
 
-**Solution**: Install SQLite development libraries
+- `API_CHECK_SERVER_HOST`: Server host (default: `127.0.0.1`)
+- `API_CHECK_SERVER_PORT`: Server port (default: `3000`)
+- `API_CHECK_PROXY_ENABLED`: Enable proxy mode (default: `false`)
+- `API_CHECK_PROXY_TARGET`: Proxy target URL
+- `RUST_BACKTRACE`: Set to `1` for detailed error traces
+- `RUST_LOG`: Set log level (e.g., `debug`, `info`, `warn`, `error`)
+
+Example:
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install libsqlite3-dev
-
-# macOS
-brew install sqlite
-
-# Nix
-nix develop  # Automatically provides SQLite
+export API_CHECK_SERVER_PORT=8080
+export RUST_LOG=debug
+cargo run
 ```
+
+## Common Issues
 
 ### Issue: OpenSSL not found
 
@@ -393,63 +250,15 @@ nix develop  # Automatically provides OpenSSL
 
 **Solution**: This is normal - Cargo downloads and compiles all dependencies on first build. Subsequent builds are much faster due to caching.
 
-For Docker users, the multi-stage build and layer caching help reduce rebuild times.
-
-### Issue: Permission denied in Docker
-
-**Solution**: The container runs as non-root user. Ensure mounted volumes have appropriate permissions:
-
-```bash
-mkdir -p data
-chmod 777 data  # Or use appropriate user/group ownership
-```
-
-### Issue: Database locked
-
-**Solution**: Close any other instances of the application accessing the same database file, or use a different database path:
-
-```bash
-./template-rust --database another.db tui
-```
-
-## Environment Variables
-
-The application supports the following environment variables:
-
-- `DATABASE_URL`: Path to the SQLite database file (default: `todo.db`)
-- `RUST_BACKTRACE`: Set to `1` or `full` for detailed error traces
-- `RUST_LOG`: Set log level (e.g., `debug`, `info`, `warn`, `error`)
-
-Example:
-
-```bash
-export DATABASE_URL=":memory:"  # Use in-memory database
-export RUST_BACKTRACE=1          # Enable backtraces
-cargo run
-```
-
-## Next Steps
-
-After setting up your environment:
-
-1. Read the [README.md](README.md) for usage instructions
-2. Explore the [examples/](examples/) directory
-3. Check the [tests/](tests/) directory for test examples
-4. Review the [CI/CD workflows](.github/workflows/) to understand the automation
-
 ## Getting Help
 
 If you encounter issues:
 
 1. Check this guide's [Common Issues](#common-issues) section
-2. Search existing [GitHub Issues](https://github.com/pnstack/template-rust/issues)
+2. Search existing [GitHub Issues](https://github.com/npv2k1/api-check/issues)
 3. Open a new issue with:
    - Your setup method (Local/Docker/Nix/Codespaces)
    - Operating system and version
    - Rust version (`rustc --version`)
    - Complete error message
    - Steps to reproduce
-
-## Contributing
-
-See [README.md](README.md#contributing) for contribution guidelines.

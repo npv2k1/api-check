@@ -1,19 +1,52 @@
 [package]
-name = "template-rust"
+name = "api-check"
 version = "0.1.0"
 edition = "2021"
 authors = ["pnstack"]
-description = "A Rust template with todo app example using SQLite and TUI"
+description = "A Rust HTTP server with request counting, proxy support, metrics collection, and API testing capabilities"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/pnstack/template-rust"
+repository = "https://github.com/npv2k1/api-check"
 
 [dependencies]
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
+# Web server and HTTP
+axum = { version = "0.7", features = ["tokio", "json"] }
+reqwest = { version = "0.12", features = ["json"] }
+tower = "0.5"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+hyper = { version = "1.4", features = ["full"] }
+http-body-util = "0.1"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full", "sync"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# CLI and configuration
+clap = { version = "4.4", features = ["derive", "env"] }
+config = "0.14"
+dotenvy = "0.15"
+toml = "0.8"
+
+# TUI for realtime charts
 ratatui = "0.24"
 crossterm = "0.27"
-clap = { version = "4.4", features = ["derive"] }
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
+
+# Utilities
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.6", features = ["v4"] }
 anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Metrics
+parking_lot = "0.12"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
