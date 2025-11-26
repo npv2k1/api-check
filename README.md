@@ -1,62 +1,40 @@
-# Template Rust
+# API Check
 
-A Rust project template featuring a todo application with SQLite database and terminal user interface (TUI).
+A Rust HTTP server application with request counting, proxy support, metrics collection, and API testing capabilities.
 
 ## Features
 
-- 📝 Todo management with SQLite persistence
-- 🖥️ Interactive Terminal User Interface (TUI)
-- 🔧 Command Line Interface (CLI)
-- 🧪 Comprehensive test suite
-- 🚀 CI/CD with GitHub Actions
-- 📦 Cross-platform releases
-- 🔒 Security auditing
-- 🐳 Docker and Docker Compose support
-- ❄️ Nix flakes for reproducible environments
-- 📦 Devcontainer configuration for GitHub Codespaces
+- 🖥️ **HTTP Dev Server**: Receives and processes HTTP requests
+- 📊 **Request Metrics**: Counts requests and measures processing time for each request
+- 🔄 **Proxy Mode**: Optional proxy to forward requests to a target server and record response status codes
+- 📈 **Real-time Dashboard**: TUI with charts for metrics visualization (requests, latency, status codes)
+- 🧪 **API Testing**: Configurable API testing (number of calls, frequency, HTTP method, body/headers)
+- ⚙️ **Configuration API**: HTTP endpoints for managing configuration and exporting metrics as JSON
+- 🔧 **Flexible Configuration**: Support for configuration via file (TOML/JSON) and environment variables
+- 📝 **Logging**: Comprehensive logging with tracing
 
 ## Installation
-
-> **💡 Quick Start**: See [SETUP.md](SETUP.md) for detailed setup instructions using Docker, Nix, Codespaces, or local development.
 
 ### From Source
 
 ```bash
-git clone https://github.com/pnstack/template-rust.git
-cd template-rust
+git clone https://github.com/npv2k1/api-check.git
+cd api-check
 cargo build --release
 ```
 
-### From Releases
-
-Download the latest binary from the [Releases](https://github.com/pnstack/template-rust/releases) page.
-
-### With Docker
+### Quick Start
 
 ```bash
-# Build the image
-docker build -t template-rust:latest .
+# Start the dev server (default mode)
+cargo run
 
-# Run with interactive TUI
-docker run --rm -it -v $(pwd)/data:/app/data template-rust:latest tui
+# Start with TUI dashboard
+cargo run -- tui
 
-# Or use Docker Compose
-docker compose up
+# Run API tests
+cargo run -- test -t http://example.com -n 20 -f 50
 ```
-
-### With Nix
-
-```bash
-# Enter development environment
-nix develop
-
-# Or run directly
-nix run
-```
-
-### With GitHub Codespaces
-
-Click the "Code" button on GitHub and select "Create codespace on main" - everything is pre-configured!
 
 ## Usage
 
@@ -64,89 +42,192 @@ Click the "Code" button on GitHub and select "Create codespace on main" - everyt
 
 ```bash
 # Show help
-./template-rust --help
+./api-check --help
 
-# Add a new todo
-./template-rust add "Buy groceries" --description "Milk, eggs, bread"
+# Start the HTTP server (default)
+./api-check server
 
-# List all todos
-./template-rust list
+# Start with TUI dashboard (server + realtime metrics)
+./api-check tui
 
-# List only completed todos
-./template-rust list --completed
+# Run API tests
+./api-check test --target http://example.com --num-calls 100 --frequency 10 --method GET
 
-# List only pending todos
-./template-rust list --pending
+# Show current configuration
+./api-check config
 
-# Complete a todo (use the ID from list command)
-./template-rust complete <todo-id>
+# Specify host and port
+./api-check --host 0.0.0.0 --port 8080 server
 
-# Delete a todo
-./template-rust delete <todo-id>
+# Use a custom config file
+./api-check --config myconfig.toml server
 
-# Start interactive TUI (default mode)
-./template-rust tui
+# Enable verbose logging
+./api-check -v server
 ```
 
-### Terminal User Interface (TUI)
+### TUI Dashboard
 
-Start the interactive mode:
+Start the interactive dashboard to view real-time metrics:
 
 ```bash
-./template-rust tui
+./api-check tui
 ```
 
 #### TUI Commands:
 - `h` - Show help
-- `n` - Add new todo
-- `d` - Delete selected todo
-- `c` - Toggle todo completion status
-- `a` - Show all todos
-- `p` - Show pending todos only
-- `f` - Show completed todos only
-- `↑↓` - Navigate todos
+- `t` - Start API test
+- `s` - Stop running test
+- `c` - Clear all metrics
+- `p` - Toggle proxy mode
 - `q` - Quit application
+
+### Management API
+
+The server exposes several HTTP endpoints for configuration and metrics:
+
+#### Configuration Endpoints
+
+```bash
+# Get current configuration
+curl http://localhost:3000/api/config
+
+# Update configuration
+curl -X PUT http://localhost:3000/api/config \
+  -H "Content-Type: application/json" \
+  -d '{"server": {"host": "127.0.0.1", "port": 3000}}'
+
+# Get/Update proxy configuration
+curl http://localhost:3000/api/config/proxy
+curl -X PUT http://localhost:3000/api/config/proxy \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true, "target": "http://example.com"}'
+
+# Get/Update test configuration
+curl http://localhost:3000/api/config/test
+curl -X PUT http://localhost:3000/api/config/test \
+  -H "Content-Type: application/json" \
+  -d '{"num_calls": 100, "frequency_ms": 50}'
+```
+
+#### Metrics Endpoints
+
+```bash
+# Get all metrics
+curl http://localhost:3000/api/metrics
+
+# Get metrics summary
+curl http://localhost:3000/api/metrics/summary
+
+# Get recent metrics (last 60 seconds by default)
+curl http://localhost:3000/api/metrics/recent?seconds=30
+
+# Clear all metrics
+curl -X POST http://localhost:3000/api/metrics/clear
+```
+
+#### Test Endpoints
+
+```bash
+# Run API test with current configuration
+curl -X POST http://localhost:3000/api/test/run
+
+# Run API test with custom parameters
+curl -X POST http://localhost:3000/api/test/run \
+  -H "Content-Type: application/json" \
+  -d '{"num_calls": 50, "frequency_ms": 100, "method": "POST", "target_url": "http://example.com/api", "body": "{\"key\":\"value\"}"}'
+
+# Check if test is running
+curl http://localhost:3000/api/test/status
+
+# Stop running test
+curl -X POST http://localhost:3000/api/test/stop
+```
+
+#### Health Check
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+### Proxy Mode
+
+Enable proxy mode to forward requests to a target server:
+
+```bash
+# Enable proxy via API
+curl -X PUT http://localhost:3000/api/config/proxy \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true, "target": "http://target-server.com"}'
+
+# All non-API requests will now be forwarded to the target
+curl http://localhost:3000/any/path  # Forwards to http://target-server.com/any/path
+```
+
+## Configuration
+
+### Configuration File
+
+Create a `config.toml` file (see `config.example.toml`):
+
+```toml
+[server]
+host = "127.0.0.1"
+port = 3000
+
+[proxy]
+enabled = false
+target = "http://localhost:8080"
+
+[test]
+num_calls = 10
+frequency_ms = 100
+method = "GET"
+target_url = "http://localhost:3000/test"
+```
+
+### Environment Variables
+
+Configuration can also be set via environment variables (prefixed with `API_CHECK_`):
+
+```bash
+export API_CHECK_SERVER_HOST=0.0.0.0
+export API_CHECK_SERVER_PORT=8080
+export API_CHECK_PROXY_ENABLED=true
+export API_CHECK_PROXY_TARGET=http://backend:8080
+```
 
 ## Project Structure
 
 ```
-template-rust/
+api-check/
 ├── .github/workflows/    # CI/CD workflows
 ├── src/
-│   ├── database/         # Database layer
-│   ├── models/           # Data models
+│   ├── api/              # Management API endpoints
+│   ├── config/           # Configuration management
+│   ├── metrics/          # Metrics collection
+│   ├── proxy/            # Proxy functionality
+│   ├── server/           # HTTP server
+│   ├── testing/          # API testing
 │   ├── tui/              # Terminal UI
 │   ├── lib.rs            # Library root
 │   └── main.rs           # CLI application
 ├── tests/                # Integration tests
-├── docs/                 # Documentation
-└── examples/             # Usage examples
+├── examples/             # Usage examples
+├── config.example.toml   # Sample configuration
+└── docs/                 # Documentation
 ```
 
 ## Development
 
-> **📚 Full Setup Guide**: See [SETUP.md](SETUP.md) for comprehensive development environment setup instructions.
-
-### Prerequisites
-
-Choose your preferred development method:
-
-- **Local**: Rust 1.70 or later, SQLite3
-- **Docker**: Docker 20.10+ and Docker Compose
-- **Nix**: Nix package manager with flakes enabled
-- **Codespaces**: Just a GitHub account!
-
 ### Building
 
 ```bash
-# Local
+# Development build
 cargo build
 
-# Docker
-docker compose up --build
-
-# Nix
-nix build
+# Release build
+cargo build --release
 ```
 
 ### Running Tests
@@ -167,48 +248,50 @@ cargo clippy -- -D warnings
 cargo fmt
 ```
 
-### Development Environments
+## API Response Examples
 
-The project provides multiple development environment options:
+### Metrics Summary Response
 
-- **Docker Compose**: `docker compose up dev` - Containerized development with live code mounting
-- **Nix Flakes**: `nix develop` - Reproducible environment with all dependencies
-- **Devcontainer**: Open in VS Code or GitHub Codespaces - Fully configured IDE
-- **Traditional**: Local Rust installation with cargo
-
-## Database
-
-The application uses SQLite for persistence. By default, it creates a `todo.db` file in the current directory. You can specify a different database path:
-
-```bash
-./template-rust --database /path/to/your/todos.db list
+```json
+{
+  "total_requests": 150,
+  "successful_requests": 145,
+  "failed_requests": 5,
+  "avg_latency_ms": 25.5,
+  "min_latency_ms": 10.2,
+  "max_latency_ms": 150.3,
+  "proxied_requests": 50,
+  "status_distribution": {
+    "200": 140,
+    "404": 3,
+    "500": 2
+  },
+  "requests_per_second": 2.5
+}
 ```
 
-For testing with in-memory database:
+### Test Run Results
 
-```bash
-./template-rust --database ":memory:" add "Test todo"
+```json
+{
+  "total_requests": 100,
+  "successful": 98,
+  "failed": 2,
+  "avg_latency_ms": 45.2,
+  "min_latency_ms": 20.1,
+  "max_latency_ms": 200.5,
+  "total_duration_ms": 5500.0,
+  "results": [
+    {
+      "index": 1,
+      "success": true,
+      "status_code": 200,
+      "latency_ms": 25.5,
+      "error": null
+    }
+  ]
+}
 ```
-
-## CI/CD
-
-The project includes comprehensive GitHub Actions workflows:
-
-- **CI** (`ci.yml`): Build, test, lint, and format checks on multiple platforms (Linux, macOS, Windows)
-- **Security** (`security.yml`): Weekly security audits with `cargo audit`
-- **Release** (`release.yml`): Automated binary releases for Linux, macOS, and Windows on version tags
-- **Docker** (`docker.yml`): Docker image build testing and docker-compose validation
-
-All workflows run automatically on push and pull requests to ensure code quality and security.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
 
 ## License
 

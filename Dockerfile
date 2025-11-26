@@ -36,7 +36,7 @@ RUN useradd -m -u 1000 appuser
 WORKDIR /app
 
 # Copy the binary from builder
-COPY --from=builder /app/target/release/template-rust /usr/local/bin/template-rust
+COPY --from=builder /app/target/release/api-check /usr/local/bin/api-check
 
 # Change ownership
 RUN chown -R appuser:appuser /app
@@ -44,15 +44,13 @@ RUN chown -R appuser:appuser /app
 # Switch to non-root user
 USER appuser
 
-# Set default database path
-ENV DATABASE_URL=/app/data/todo.db
+# Set default environment variables
+ENV API_CHECK_SERVER_HOST=0.0.0.0
+ENV API_CHECK_SERVER_PORT=3000
 
-# Create data directory
-RUN mkdir -p /app/data
-
-# Expose any necessary ports (if needed for future web features)
-# EXPOSE 8080
+# Expose the server port
+EXPOSE 3000
 
 # Set the default command
-ENTRYPOINT ["template-rust"]
-CMD ["--help"]
+ENTRYPOINT ["api-check"]
+CMD ["server"]
